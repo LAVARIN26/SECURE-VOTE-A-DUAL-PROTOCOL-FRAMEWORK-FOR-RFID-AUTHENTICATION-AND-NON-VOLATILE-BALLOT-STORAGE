@@ -1,0 +1,2 @@
+# SECURE-VOTE-A-DUAL-PROTOCOL-FRAMEWORK-FOR-RFID-AUTHENTICATION-AND-NON-VOLATILE-BALLOT-STORAGE
+Secure Vote is a dual-protocol electronic voting framework integrating RFID-based voter authentication with encrypted, non-volatile ballot storage. It prevents unauthorized access, tag cloning, and vote tampering while ensuring persistent, auditable, and power-failure-resistant ballot records for secure and reliable elections.
