@@ -1,0 +1,310 @@
+#include"lcd_header.h"
+#include<string.h>
+#include "i2c.h"
+#define sw1 4	  // TVK Button
+#define sw2 5	  // DMK Button
+#define sw3 6	  // ADMK Button
+#define sw4 7	  // RESULT Button
+#define buz 1<<24 //Invalid card Buzzer ON/OFF
+void UART_CONFIG(void);
+unsigned char UART_RX(void);
+void voting_section(void);
+void UART_tx(unsigned char );
+void UART_STR(unsigned char *);
+void tvk_fun(char n)
+{
+	 start();
+	 write(0xa0);
+	 write(0x00);
+	 write(n);
+	 stop();
+	 delay(1000);
+}
+void dmk_fun(char n)
+{
+	start();
+	write(0xa0);
+	write(0x01);
+	write(n);
+	stop();
+	delay(1000);
+}
+void admk_fun(char n)
+{
+	start();
+  write(0xa0);
+  write(0x02);
+	write(n);
+	stop();
+  delay(1000);
+}
+
+/* **********Vote counters *************/
+unsigned char tvk = '0', dmk = '0', admk = '0';
+ 	/* Read from EEPROM all votes */
+
+unsigned int tvk_re,dmk_re,admk_re;
+char s[20];
+int main()
+{
+    unsigned char rxByte;
+    unsigned int i;
+    LCD_CMD(0x80);
+    LCD_ROLLING_STRING("SECURE VOTE: A DUAL PROTOCOL FRAMEWORK FOR RFID AUTHENTICATION AND NON-VOLATILE BALLOT STORAGE");
+    LCD_CMD(0x01);
+	  LCD_CMD(0xC0);
+     STRING("TAP CARD");
+    while (1)
+    {
+        i = 0;
+
+        /*************** Read RFID ***************/	  
+        for(i=0;i<12;i++)
+        {
+            rxByte = UART_RX();
+      			s[i]=rxByte;
+		  }
+		  s[i]='\0';
+
+		LCD_CMD(0x01);
+
+      /*************** CARD 1 ***************/
+        if (strcmp(s, "0600676AD5DE") == 0)
+        {
+            if (voted1 == 1)
+            {
+				LCD_CMD(0x01);
+                LCD_CMD(0xC0);
+                STRING("ALREADY VOTED");
+                delay(2000);
+            }
+            else
+            {
+                voted1 = 1;
+                voting_section();
+            }
+        }
+
+
+        /*************** CARD 2 ***************/
+
+        else if (strcmp(s, "0600680EE989") == 0)
+        {
+            if (voted2 == 1)
+            {
+				LCD_CMD(0x01);
+                LCD_CMD(0xC0);
+                STRING("ALREADY VOTED");
+                delay(2000);
+            }
+            else
+            {
+                voted2 = 1;
+                voting_section();
+            }
+        }
+
+
+        /*************** CARD 3 ***************/
+
+        else if (strcmp(s, "060067DBFC46") == 0)
+        {
+            if (voted3 == 1)
+            {
+				LCD_CMD(0x01);
+                LCD_CMD(0xC0);
+                STRING("ALREADY VOTED");
+                delay(2000);
+            }
+            else
+            {
+                voted3 = 1;
+                voting_section();
+            }
+        }
+
+
+        /*************** CARD 4 ***************/
+        else if (strcmp(s, "0600674E6C43") == 0)
+        {
+            if (voted4 == 1)
+            {
+				LCD_CMD(0x01);
+                LCD_CMD(0xC0);
+                STRING("ALREADY VOTED");
+                delay(2000);
+            }
+            else
+            {
+                voted4 = 1;
+                voting_section();
+            }
+        }
+		 else if (strcmp(s, "050053755477") == 0)
+        {
+				LCD_CMD(0x01);
+                voting_section();
+        }
+        else
+        {
+			LCD_CMD(0x01);
+            LCD_CMD(0xC0);
+            STRING("INVALID CARD");
+			IOCLR1=buz;
+			delay(5000);
+			IOSET1=buz;
+            delay(2000);
+        }
+        /* Return to Home Screen */
+        LCD_CMD(0x01);
+        LCD_CMD(0x80);
+        STRING("SECURE VOTE");
+        LCD_CMD(0xC0);
+        STRING("TAP CARD");
+     }
+}
+
+
+/*************** VOTING SECTION ***************/		
+
+void voting_section()
+{
+		  if (strcmp(s, "050053755477") == 0)
+	   	{
+			LCD_CMD(0x01);
+	    LCD_CMD(0x80);
+		 STRING("PRESS sw4");
+		 while(1){
+			if(((IOPIN0 >> sw4) & 1) == 0)
+   		 {
+			tvk_re=((read(0x00))-'0'); 
+			dmk_re=((read(0x01))-'0');
+			admk_re=((read(0x02))-'0');
+            LCD_CMD(0x01);
+            LCD_CMD(0x80);
+            STRING("RESULT");
+            delay(1000);
+            LCD_CMD(0x01);
+            LCD_CMD(0x80);
+            STRING("TVK VOTES:");
+            LCD_CMD(0xC0);
+            INTEGER(tvk_re);
+            delay(2000);
+            LCD_CMD(0x01);
+            LCD_CMD(0x80);
+            STRING("DMK VOTES:");
+            LCD_CMD(0xC0);
+            INTEGER(dmk_re);
+            delay(2000);
+            LCD_CMD(0x01);
+            LCD_CMD(0x80);
+            STRING("ADMK VOTES:");
+            LCD_CMD(0xC0);
+            INTEGER(admk_re);
+            delay(2000);
+            LCD_CMD(0x01);
+            LCD_CMD(0x80);
+            STRING("WINNER:");
+            if((tvk_re > dmk_re) && (tvk_re > admk_re))
+      			{
+                STRING("TVK");
+    				}
+            else if((dmk_re > tvk_re) && (dmk_re > admk_re))
+      			{
+                STRING("DMK");
+     				}
+            else if((admk_re > tvk_re) && (admk_re > dmk_re))
+      			{
+                STRING("ADMK");
+    				}
+            else
+      			{
+      				 LCD_CMD(0x01);
+            	 LCD_CMD(0x80);
+               STRING("RESULT-TIE");
+       		 }
+            delay(3000);
+            while(((IOPIN0 >> sw4) & 1) == 0);
+      			tvk='0',dmk='0',admk='0';
+			tvk_fun('0');
+			dmk_fun('0');
+			admk_fun('0');
+			break;
+       }
+		}
+		}
+           else 
+			{
+			 LCD_CMD(0x01);
+             LCD_CMD(0x80);
+             STRING("SW1 SW2 SW3");
+              LCD_CMD(0xC0);
+              STRING("TVK DMK ADMK");
+			  while(1){
+			if (((IOPIN0 >> sw1) & 1) == 0)
+            {
+                tvk++;
+                tvk_fun(tvk);
+                LCD_CMD(0x01);
+                LCD_CMD(0xC0);
+                STRING("VOTE TVK DONE");
+                delay(2000);
+                while (((IOPIN0 >> sw1) & 1) == 0);
+               break;
+            }
+            else if (((IOPIN0 >> sw2) & 1) == 0)
+            {
+                dmk++;
+                dmk_fun(dmk);
+                LCD_CMD(0x01);
+                LCD_CMD(0xC0);
+                STRING("VOTE DMK DONE");
+                delay(2000);
+                while (((IOPIN0 >> sw2) & 1) == 0);
+                break;
+            }
+            else if (((IOPIN0 >> sw3) & 1) == 0)
+            {
+                admk++;
+                admk_fun(admk);
+                LCD_CMD(0x01);
+               LCD_CMD(0xC0);
+                STRING("VOTE ADMK DONE");
+                delay(2000);
+                while (((IOPIN0 >> sw3) & 1) == 0);
+                break;
+            }
+			}
+
+/********* RESULT BUTTON **********/
+  
+ 	 }
+}
+/************ UART Configuration **************/
+void UART_CONFIG(void)
+{
+	PINSEL0|=0X05;
+	U0LCR=0X83;
+	U0DLL=97;
+	U0DLM=0;
+	U0LCR=0X03;
+}
+
+/************ UART Recive Configuration **************/
+unsigned char UART_RX(void)
+{
+	while((U0LSR&1)==0);
+	return U0RBR;
+}
+void UART_tx(unsigned char ch)
+{
+	U0THR=ch;
+	while(((U0LSR>>5)&1)==0);
+}
+void UART_STR(unsigned char *s)
+{
+	while(*s)
+	{
+		UART_tx(*s++);
+	}
+}
